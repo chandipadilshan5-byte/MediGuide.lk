@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediGuide AI - වෛද්‍ය මාර්ගෝපදේශකය</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Noto+Sans+Sinhala:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        /* ===== CSS Variables & Reset ===== */
+        :root {
+            --bg: #0B1A17;
+            --bg-deep: #061210;
+            --fg: #E8E0D4;
+            --fg-dim: #A8A196;
+            --muted: #5E6E67;
+            --accent: #C8963E;
+            --accent-glow: rgba(200, 150, 62, 0.35);
+            --primary: #1A6B54;
+            --primary-light: #239B78;
+            --card: rgba(18, 55, 43, 0.55);
+            --card-hover: rgba(26, 80, 62, 0.7);
+            --border: rgba(200, 150, 62, 0.15);
+            --border-strong: rgba(200, 150, 62, 0.35);
+            --glass: rgba(11, 26, 23, 0.85);
+            --danger: #E85D4A;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.7;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-light); }
+
+        /* ===== Atmospheric Background ===== */
+        .atmosphere {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .atmosphere::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 600px 600px at 15% 20%, rgba(26, 107, 84, 0.2), transparent),
+                radial-gradient(ellipse 500px 500px at 85% 70%, rgba(200, 150, 62, 0.1), transparent),
+                radial-gradient(ellipse 400px 400px at 50% 50%, rgba(26, 107, 84, 0.08), transparent);
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: blobFloat 20s ease-in-out infinite;
+        }
+
+        .blob-1 {
+            width: 300px; height: 300px;
+            background: var(--primary);
+            top: 10%; left: 5%;
+            animation-delay: 0s;
+        }
+
+        .blob-2 {
+            width: 250px; height: 250px;
+            background: var(--accent);
+            top: 60%; right: 10%;
+            animation-delay: -7s;
+            animation-duration: 25s;
+            opacity: 0.2;
+        }
+
+        .blob-3 {
+            width: 200px; height: 200px;
+            background: var(--primary-light);
+            bottom: 15%; left: 40%;
+            animation-delay: -14s;
+            animation-duration: 22s;
+            opacity: 0.15;
+        }
+
+        @keyframes blobFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -40px) scale(1.1); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(15px, 35px) scale(1.05); }
+        }
+
+        /* Subtle grid pattern */
+        .grid-pattern {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(200, 150, 62, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(200, 150, 62, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* ===== Navigation ===== */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: box-shadow 0.3s ease;
+        }
+
+        nav.scrolled {
+            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .nav-brand-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary-light), var(--accent));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .nav-brand-text {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--fg);
+        }
+
+        .nav-brand-text span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+        }
+
+        .nav-links li a {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            color: var(--fg-dim);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 400;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .nav-links li a:hover {
+            color: var(--fg);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .nav-links li a.active {
+            color: var(--accent);
+            background: var(--accent-glow);
+            font-weight: 600;
+        }
+
+        .nav-links li a i {
+            font-size: 13px;
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--fg);
+            font-size: 22px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        /* ===== Pages Container ===== */
+        .pages-wrapper {
+            position: relative;
+            z-index: 1;
+            padding-top: 64px;
+            min-height: 100vh;
+        }
+
+        .page {
+            display: none;
+            animation: pageIn 0.4s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes pageIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ===== HOME PAGE ===== */
+        .hero {
+            min-height: calc(100vh - 64px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 24px;
+            position: relative;
+        }
+
+        .hero-content {
+            max-width: 720px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 18px;
+            border-radius: 50px;
+            background: var(--accent-glow);
+            border: 1px solid var(--border-strong);
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 28px;
+            animation: fadeInDown 0.6s ease 0.1s both;
+        }
+
+        .hero-badge i {
+            font-size: 11px;
+        }
+
+        .hero h1 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            font-size: clamp(36px, 6vw, 64px);
+            line-height: 1.15;
+            margin-bottom: 20px;
+            animation: fadeInDown 0.6s ease 0.2s both;
+        }
+
+        .hero h1 .highlight {
+            background: linear-gradient(135deg, var(--accent), #E8C468);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 17px;
+            color: var(--fg-dim);
+            max-width: 540px;
+            margin: 0 auto 36px;
+            animation: fadeInDown 0.6s ease 0.35s both;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInDown 0.6s ease 0.5s both;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-18px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-weight: 600;
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary));
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(26, 107, 84, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(26, 107, 84, 0.55);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--fg);
+            border: 1px solid var(--border-strong);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 48px 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-family: 'Playfair Display', serif;
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--accent);
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        /* Featured Section */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .section-header h2 i {
+            color: var(--accent);
+            margin-right: 10px;
+            font-size: 22px;
+        }
+
+        .featured-section {
+            padding: 60px 0;
+        }
+
+        /* ===== DISEASE GRID ===== */
+        .search-bar {
+            position: relative;
+            margin-bottom: 28px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 14px 20px 14px 50px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--fg);
+            font-size: 15px;
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            outline: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-bar input::placeholder {
+            color: var(--muted);
+        }
+
+        .search-bar input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .search-bar i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 16px;
+            transition: color 0.3s ease;
+        }
+
+        .search-bar input:focus + i,
+        .search-bar input:not(:placeholder-shown) + i {
+            color: var(--accent);
+        }
+
+        /* Category filter pills */
+        .filter-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 28px;
+        }
+
+        .filter-pill {
+            padding: 6px 16px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--fg-dim);
+            font-size: 13px;
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .filter-pill:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .filter-pill.active {
+            background: var(--accent-glow);
+            border-color: var(--accent);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .disease-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding-bottom: 80px;
+        }
+
+        .disease-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: cardIn 0.5s ease forwards;
+        }
+
+        .disease-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-light), var(--accent));
+            opacity: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        .disease-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-strong);
+            background: var(--card-hover);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 30px var(--accent-glow);
+        }
+
+        .disease-card:hover::before {
+            opacity: 1;
+        }
+
+        @keyframes cardIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .card-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .tag-badge {
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .card-name {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .card-name-en {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: var(--fg-dim);
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        .card-remedies-count {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .card-remedies-count i {
+            margin-right: 4px;
+            color: var(--accent);
+        }
+
+        .card-arrow {
+            color: var(--muted);
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .disease-card:hover .card-arrow {
+            color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .no-results {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+        }
+
+        .no-results i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+            opacity: 0.4;
+        }
+
+        .no-results p {
+            font-size: 16px;
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.35s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: linear-gradient(180deg, #0F2B24, var(--bg-deep));
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 560px;
+            max-height: 85vh;
+            overflow-y: auto;
+            transform: translateY(30px) scale(0.96);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+        }
+
+        .modal-overlay.open .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-header {
+            padding: 28px 28px 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .modal-header-left {
+            flex: 1;
+        }
+
+        .modal-tag {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 50px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .modal-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .modal-title-en {
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.03);
+            color: var(--fg-dim);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s ease;
+            flex-shrink: 0;
+        }
+
+        .modal-close:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 24px 28px 28px;
+        }
+
+        .modal-section {
+            margin-bottom: 24px;
+        }
+
+        .modal-section-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .modal-section-label i {
+            font-size: 11px;
+        }
+
+        .modal-desc {
+            font-size: 15px;
+            color: var(--fg-dim);
+            line-height: 1.8;
+        }
+
+        .modal-remedies-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .modal-remedies-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            background: rgba(26, 107, 84, 0.12);
+            border: 1px solid rgba(26, 107, 84, 0.2);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            line-height: 1.6;
+            transition: all 0.25s ease;
+        }
+
+        .modal-remedies-list li:hover {
+            background: rgba(26, 107, 84, 0.2);
+            border-color: rgba(26, 107, 84, 0.35);
+        }
+
+        .modal-remedies-list li .remedy-num {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .modal-disclaimer {
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            background: rgba(232, 93, 74, 0.1);
+            border: 1px solid rgba(232, 93, 74, 0.25);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .modal-disclaimer i {
+            color: var(--danger);
+            font-size: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .modal-disclaimer p {
+            font-size: 12px;
+            color: var(--fg-dim);
+            line-height: 1.7;
+        }
+
+        .modal-disclaimer strong {
+            color: var(--danger);
+        }
+
+        /* ===== SYMPTOM CHECKER PAGE ===== */
+        .checker-section {
+            padding: 48px 0 80px;
+        }
+
+        .tool-tabs {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 28px;
+            overflow-x: auto;
+            width: fit-content;
+        }
+
+        .tool-tab {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--fg-dim);
+            font-size: 14px;
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tool-tab:hover {
+            color: var(--fg);
+            background: rgba(255,255,255,0.04);
+        }
+
+        .tool-tab.active {
+            background: var(--primary);
+            color: #fff;
+            font-weight: 600;
+            box-shadow: 0 2px 12px rgba(26, 107, 84, 0.4);
+        }
+
+        .tool-tab i {
+            font-size: 13px;
+        }
+
+        .tool-panel {
+            display: none;
+            animation: panelIn 0.35s ease;
+        }
+
+        .tool-panel.active {
+            display: block;
+        }
+
+        @keyframes panelIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Symptom Selection */
+        .symptom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .symptom-chip {
+            padding: 10px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--fg-dim);
+            font-size: 14px;
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+        }
+
+        .symptom-chip:hover {
+            border-color: var(--primary-light);
+            color: var(--fg);
+        }
+
+        .symptom-chip.selected {
+            background: rgba(26, 107, 84, 0.25);
+            border-color: var(--primary-light);
+            color: var(--primary-light);
+            font-weight: 600;
+        }
+
+        .symptom-chip i {
+            font-size: 12px;
+            opacity: 0.5;
+        }
+
+        .symptom-chip.selected i {
+            opacity: 1;
+        }
+
+        .checker-results {
+            margin-top: 24px;
+        }
+
+        .checker-results h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checker-results h3 i {
+            color: var(--accent);
+        }
+
+        .result-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .result-card:hover {
+            border-color: var(--border-strong);
+            background: var(--card-hover);
+        }
+
+        .result-card .match-score {
+            font-family: 'Playfair Display', serif;
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--accent);
+            min-width: 48px;
+            text-align: center;
+        }
+
+        .result-card .match-label {
+            font-size: 10px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        .result-card .result-info {
+            flex: 1;
+        }
+
+        .result-card .result-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .result-card .result-tag {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        /* Body Part Grid */
+        .bodypart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .bodypart-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 24px 16px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--card);
+            color: var(--fg-dim);
+            font-size: 14px;
+            font-family: 'Noto Sans Sinhala', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .bodypart-btn i {
+            font-size: 28px;
+            transition: all 0.3s ease;
+        }
+
+        .bodypart-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .bodypart-btn:hover i {
+            color: var(--accent);
+        }
+
+        .bodypart-btn.active {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .bodypart-btn.active i {
+            color: var(--accent);
+        }
+
+        /* Category Grid */
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .category-card {
+            padding: 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--card);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .category-card:hover {
+            border-color: var(--border-strong);
+            transform: translateY(-2px);
+        }
+
+        .category-card .cat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 14px;
+        }
+
+        .category-card .cat-name {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .category-card .cat-count {
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        /* ===== ABOUT PAGE ===== */
+        .about-section {
+            padding: 60px 0 80px;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .about-section h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 32px;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .about-section h2 i {
+            color: var(--accent);
+            margin-right: 10px;
+        }
+
+        .about-section p {
+            font-size: 15px;
+            color: var(--fg-dim);
+            line-height: 1.9;
+            margin-bottom: 20px;
+        }
+
+        .about-card {
+            padding: 28px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: var(--card);
+            margin-bottom: 20px;
+        }
+
+        .about-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .about-card h3 i {
+            color: var(--accent);
+        }
+
+        .about-card p, .about-card ul {
+            font-size: 14px;
+            color: var(--fg-dim);
+            line-height: 1.8;
+        }
+
+        .about-card ul {
+            padding-left: 20px;
+            margin-top: 8px;
+        }
+
+        .about-card ul li {
+            margin-bottom: 6px;
+        }
+
+        .disclaimer-box {
+            padding: 24px;
+            border-radius: var(--radius);
+            background: rgba(232, 93, 74, 0.08);
+            border: 1px solid rgba(232, 93, 74, 0.25);
+            margin-top: 32px;
+        }
+
+        .disclaimer-box h3 {
+            color: var(--danger);
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .disclaimer-box p {
+            font-size: 13px;
+            color: var(--fg-dim);
+            line-height: 1.8;
+            margin-bottom: 0;
+        }
+
+        /* ===== TOAST ===== */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 14px 20px;
+            border-radius: var(--radius-sm);
+            background: var(--glass);
+            border: 1px solid var(--border);
+            color: var(--fg);
+            font-size: 14px;
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow);
+            animation: toastIn 0.35s ease, toastOut 0.35s ease 2.6s forwards;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toast i {
+            color: var(--accent);
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes toastOut {
+            to { opacity: 0; transform: translateX(30px); }
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            position: relative;
+            z-index: 1;
+            padding: 32px 24px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        footer span {
+            color: var(--accent);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 64px;
+                left: 0;
+                right: 0;
+                background: var(--glass);
+                backdrop-filter: blur(20px);
+                flex-direction: column;
+                padding: 12px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .nav-links.open {
+                display: flex;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .disease-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .tool-tabs {
+                width: 100%;
+            }
+
+            .symptom-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+
+            .modal {
+                max-height: 90vh;
+            }
+
+            .modal-header {
+                padding: 20px 20px 0;
+            }
+
+            .modal-body {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .btn {
+                justify-content: center;
+            }
+
+            .bodypart-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Atmospheric Background -->
+    <div class="atmosphere" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    <div class="grid-pattern" aria-hidden="true"></div>
+
+    <!-- Navigation -->
+    <nav role="navigation" aria-label="Main Navigation">
+        <a class="nav-brand" onclick="Maps('home')" tabindex="0" role="button" aria-label="Home">
+            <div class="nav-brand-icon"><i class="fa-solid fa-leaf"></i></div>
+            <div class="nav-brand-text">MediGuide <span>AI</span></div>
+        </a>
+        <button class="mobile-toggle" onclick="toggleMobileNav()" aria-label="Toggle menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <ul class="nav-links" id="navLinks">
+            <li><a class="active" data-page="home" onclick="Maps('home')"><i class="fa-solid fa-house"></i> මුල් පිටුව</a></li>
+            <li><a data-page="diseases" onclick="Maps('diseases')"><i class="fa-solid fa-book-medical"></i> රෝග සංග්‍රහය</a></li>
+            <li><a data-page="checker" onclick="Maps('checker')"><i class="fa-solid fa-stethoscope"></i> රෝග ලක්ෂණ පරීක්ෂාව</a></li>
+            <li><a data-page="about" onclick="Maps('about')"><i class="fa-solid fa-circle-info"></i> පිළිබඳව</a></li>
+        </ul>
+    </nav>
+
+    <!-- Pages Wrapper -->
+    <div class="pages-wrapper">
+
+        <!-- ===== HOME PAGE ===== -->
+        <div id="page-home" class="page active">
+            <section class="hero">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <i class="fa-solid fa-sparkles"></i>
+                        ශ්‍රී ලංකාවේ සාම්ප්‍රදායික වෛද්‍ය ක්‍රම
+                    </div>
+                    <h1>ඔබේ <span class="highlight">සෞඛ්‍ය</span> ගැන දැනගන්න<br>අනාගතයට සූදානම් වන්න</h1>
+                    <p>ශ්‍රී ලංකාවේ වසර දහස් ගණනක් පැරණි සාම්ප්‍රදායික නිවසේ වෛද්‍ය ක්‍රම මත පදනම් වූ අධ්‍යාපනික මාර්ගෝපදේශකයක්. මෙය වෘත්තීය වෛද්‍ය උපදෙස් නොවේ.</p>
+                    <div class="hero-actions">
+                        <button class="btn btn-primary" onclick="Maps('diseases')">
+                            <i class="fa-solid fa-magnifying-glass"></i> රෝග සොයන්න
+                        </button>
+                        <button class="btn btn-outline" onclick="Maps('checker')">
+                            <i class="fa-solid fa-stethoscope"></i> ලක්ෂණ පරීක්ෂාව
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <div class="container">
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-number">25</div>
+                        <div class="stat-label">සාමාන්‍ය රෝග</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">10</div>
+                        <div class="stat-label">කාණ්ඩ</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">85+</div>
+                        <div class="stat-label">නිවසේ වෛද්‍ය ක්‍රම</div>
+                    </div>
+                </div>
+
+                <section class="featured-section">
+                    <div class="section-header">
+                        <h2><i class="fa-solid fa-fire"></i> ජනප්‍රිය රෝග</h2>
+                        <button class="btn btn-outline" style="padding:8px 18px; font-size:13px;" onclick="Maps('diseases')">
+                            සියල්ල බලන්න <i class="fa-solid fa-arrow-right" style="font-size:11px;"></i>
+                        </button>
+                    </div>
+                    <div class="disease-grid" id="featuredGrid"></div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ===== DISEASES PAGE ===== -->
+        <div id="page-diseases" class="page">
+            <div class="container" style="padding-top: 48px;">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-book-medical"></i> රෝග සංග්‍රහය</h2>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="රෝග නාමයෙන් හෝ කාණ්ඩයෙන් සොයන්න..." aria-label="Search diseases">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+
+                <div class="filter-pills" id="filterPills"></div>
+
+                <div class="disease-grid" id="diseaseGrid"></div>
+            </div>
+        </div>
+
+        <!-- ===== SYMPTOM CHECKER PAGE ===== -->
+        <div id="page-checker" class="page">
+            <div class="container checker-section">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-stethoscope"></i> රෝග ලක්ෂණ පරීක්ෂාව</h2>
+                </div>
+
+                <div class="tool-tabs" role="tablist">
+                    <button class="tool-tab active" data-tab="symptoms" onclick="switchTab('symptoms')" role="tab" aria-selected="true">
+                        <i class="fa-solid fa-list-check"></i> ලක්ෂණ අනුව
+                    </button>
+                    <button class="tool-tab" data-tab="bodypart" onclick="switchTab('bodypart')" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-person"></i> ශරීර අවයව අනුව
+                    </button>
+                    <button class="tool-tab" data-tab="categories" onclick="switchTab('categories')" role="tab" aria-selected="false">
+                        <i class="fa-solid fa-layer-group"></i> කාණ්ඩ අනුව
+                    </button>
+                </div>
+
+                <!-- Panel: By Symptoms -->
+                <div class="tool-panel active" id="panel-symptoms" role="tabpanel">
+                    <p style="color:var(--fg-dim); font-size:14px; margin-bottom:20px;">
+                        <i class="fa-solid fa-circle-info" style="color:var(--accent); margin-right:6px;"></i>
+                        ඔබට ඇති රෝග ලක්ෂණ තෝරන්න. ඊට අදාළ සම්භාව්‍ය රෝග පහතින් පෙන්වනු ලැබේ.
+                    </p>
+                    <div class="symptom-grid" id="symptomGrid"></div>
+                    <button class="btn btn-primary" id="checkSymptomsBtn" onclick="checkSymptoms()">
+                        <i class="fa-solid fa-magnifying-glass-chart"></i> පරීක්ෂා කරන්න
+                    </button>
+                    <div class="checker-results" id="symptomResults"></div>
+                </div>
+
+                <!-- Panel: By Body Part -->
+                <div class="tool-panel" id="panel-bodypart" role="tabpanel">
+                    <p style="color:var(--fg-dim); font-size:14px; margin-bottom:20px;">
+                        <i class="fa-solid fa-circle-info" style="color:var(--accent); margin-right:6px;"></i>
+                        වේදනාව ඇති ශරීර අවයවය තෝරන්න.
+                    </p>
+                    <div class="bodypart-grid" id="bodypartGrid"></div>
+                    <div class="checker-results" id="bodypartResults"></div>
+                </div>
+
+                <!-- Panel: By Categories -->
+                <div class="tool-panel" id="panel-categories" role="tabpanel">
+                    <p style="color:var(--fg-dim); font-size:14px; margin-bottom:20px;">
+                        <i class="fa-solid fa-circle-info" style="color:var(--accent); margin-right:6px;"></i>
+                        කාණ්ඩය අනුව රෝග බලන්න.
+                    </p>
+                    <div class="category-grid" id="categoryGrid"></div>
+                    <div class="checker-results" id="categoryResults"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== ABOUT PAGE ===== -->
+        <div id="page-about" class="page">
+            <div class="container">
+                <div class="about-section">
+                    <h2><i class="fa-solid fa-circle-info"></i> MediGuide AI පිළිබඳව</h2>
+                    <p>
+                        MediGuide AI යනු ශ්‍රී ලංකාවේ වසර දහස් ගණනක් පැරණි ආයුර්වේද සහ සාම්ප්‍රදායික වෛද්‍ය ඥානය මාධ්‍යගත කරන අධ්‍යාපනික වෙබ් යෙදුමකි. මෙම යෙදුම මගින් පොදු සෞඛ්‍ය ගැටලූ 25ක් සඳහා නිවසේම සාදා ගත හැකි සාම්ප්‍රදායික ප්‍රතිකාර ක්‍රම ඉදිරිපත් කරයි.
+                    </p>
+
+                    <div class="about-card">
+                        <h3><i class="fa-solid fa-bullseye"></i> අරමුණ</h3>
+                        <p>ශ්‍රී ලංකාවේ ජනයා අතර පවතින සාම්ප්‍රදායික වෛද්‍ය ඥානය සංරක්ෂණය කර ඊට අධ්‍යාපනික අගයක් එක් කිරීම. මෙය වෘත්තීය වෛද්‍ය ප්‍රතිකාරයක් ලෙස නොසැලකේ.</p>
+                    </div>
+
+                    <div class="about-card">
+                        <h3><i class="fa-solid fa-leaf"></i> භාවිතා කරන ද්‍රව්‍ය</h3>
+                        <ul>
+                            <li>කොත්තමල්ලි, වෙනිවැල්ගැට, ඉරිවේරිය</li>
+                            <li>අලුසිං, අහුණු, තිප්පිලි, ඉඟුරු</li>
+                            <li>කොරකහ, පපාය, දෙහි, නියංගල</li>
+                            <li>පුස්කොළ, සඳනේ, සියඹලා, උණාන</li>
+                            <li>කාවක, රාසකිඳු, අමුක්කු, අසමෝධ</li>
+                        </ul>
+                    </div>
+
+                    <div class="about-card">
+                        <h3><i class="fa-solid fa-code"></i> තාක්ෂණය</h3>
+                        <p>මෙම යෙදුම සම්පූර්ණයෙන්ම ක්ලයන්ට්-සයිඩ් JavaScript භාවිතයෙන් නිර්මාණය කර ඇත. කිසිදු බාහිර API ඇමතුමක් හෝ සර්වර් සම්බන්ධතාවක් භාවිතා නොකරයි. සියලු දත්ත බ්‍රවුසරයේම ගබඩා කර ඇත.</p>
+                    </div>
+
+                    <div class="disclaimer-box">
+                        <h3><i class="fa-solid fa-triangle-exclamation"></i> වෛද්‍ය අවවාදය</h3>
+                        <p>
+                            මෙහි ඉදිරිපත් කර ඇති සියලුම නිවසේ වෛද්‍ය ක්‍රම <strong>අධ්‍යාපන අරමුණු සඳහා පමණක්</strong> වන අතර, ඒවා වෘත්තීය වෛද්‍ය උපදෙස් ලෙස නොසැලකිය යුතුය. බරපතල හෝ දිගින් දිගටම පවතින සෞඛ්‍ය ගැටලූ සඳහා කලින්ම සුදුසුකම් ලත් වෛද්‍යවරයෙකු හමුවීම කළ යුතුය.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-header-left">
+                    <span class="modal-tag" id="modalTag"></span>
+                    <h2 class="modal-title" id="modalTitle"></h2>
+                    <div class="modal-title-en" id="modalTitleEn"></div>
+                </div>
+                <button class="modal-close" onclick="closeModal()" aria-label="Close modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <div class="modal-section-label"><i class="fa-solid fa-file-medical"></i> විස්තරය</div>
+                    <p class="modal-desc" id="modalDesc"></p>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-section-label"><i class="fa-solid fa-leaf"></i> සාම්ප්‍රදායික ප්‍රතිකාර ක්‍රම</div>
+                    <ul class="modal-remedies-list" id="modalRemedies"></ul>
+                </div>
+                <div class="modal-disclaimer">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <p><strong>අවවාදය:</strong> මෙම ප්‍රතිකාර ක්‍රම අධ්‍යාපන අරමුණු සඳහා පමණි. බරපතල තත්ත්වයකදී කලින්ම වෛද්‍යවරයෙකු හමුවන්න.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Footer -->
+    <footer>
+        <span>MediGuide AI</span> &mdash; ශ්‍රී ලංකාවේ සාම්ප්‍රදායික වෛද්‍ය අධ්‍යාපන මාර්ගෝපදේශකය
+    </footer>
+
+    <script>
+        /* ==========================================================
+           DISEASE DATABASE — 25 Common Diseases with Sri Lankan Remedies
+           ========================================================== */
+        var diseaseDatabase = [
+            {
+                id: "d01",
+                name: "සෙම්ප්‍රතිශ්‍යාව (Common Cold)",
+                tag: "Respiratory",
+                desc: "වෛරස ආසාදනයක් නිසා නාසයෙන් ලෙඩ දියර ගැලීම, කැස්ස, උගුරේ වේදනාව සහ හිසරදය ඇතිවීමේ තත්ත්වයකි. ශ්‍රී ලංකාවේ ඉතා පොදු රෝගයකි.",
+                remedies: [
+                    "කොත්තමල්ලි සහ වෙනිවැල්ගැට කුළුබඩු තම්බා පානය කිරීම",
+                    "හණ් කිරි සහ මී පැණි මිශ්‍ර කර උණුසුම්ව බීම",
+                    "පුස්කොළ පත්‍ර කීපයක් තම්බා එම ජලය පානය කිරීම"
+                ],
+                symptoms: ["runny nose", "sneezing", "sore throat", "headache", "නාසයෙන් ලෙඩ දියර", "කැස්ස", "හිසරදය"]
+            },
+            {
+                id: "d02",
+                name: "කැස්ස (Cough)",
+                tag: "Respiratory",
+                desc: "ශ්වාස නාල ආසාදනය හෝ අනෙකුත් හේතූන් නිසා පෙනහළුවලින් බලහත්කාරයෙන් වායුව පිටතට ගැනීමේ රෝග ලක්ෂණයකි.",
+                remedies: [
+                    "අලුසිං කිරි සහ පැණි මිශ්‍ර කර දිනකට දෙවරක් බීම",
+                    "තුරුම්බා අග කොටස් සහ ඉරිවේරිය කුළුබඩු අඹරා පානය කිරීම",
+                    "දෙහි කොළ කරල් ජලය පානය කිරීම"
+                ],
+                symptoms: ["cough", "chest pain", "sore throat", "කැස්ස", "පපුවේ වේදනාව"]
+            },
+            {
+                id: "d03",
+                name: "උණ (Fever)",
+                tag: "General",
+                desc: "ශරීරයේ සාමාන්‍ය උෂ්ණත්වය ඉහළ යාමේ තත්ත්වයකි. වෛරස හෝ බැක්ටීරියා ආසාදන නිසා සිදුවේ. ශරීර වේදනාව සහ විඳදරාගත නොහැකි බවක් දැනේ.",
+                remedies: [
+                    "කොරකහ පත්‍ර තම්බා එම ජලය පානය කිරීම",
+                    "පිපිඤ්ඤා මුදු කිහිපයක් සමඟ තේ බීම",
+                    "රතු ඕක්‍රා ජුස් පානය කිරීම"
+                ],
+                symptoms: ["fever", "body ache", "fatigue", "headache", "උණ", "ශරීර වේදනාව", "ක්ෂතිය"]
+            },
+            {
+                id: "d04",
+                name: "හිසරදය (Migraine)",
+                tag: "Neurological",
+                desc: "එක් පැත්තක හිසේ පලිහින් වැටෙන තද වේදනාවකි. වමනය, ආලෝකයට සංවේදීබව සහ හිස කරකැවීම ඇතිවිය හැක.",
+                remedies: [
+                    "ඇටිකොක්කා පේර මුදින්න සහ පේර යුෂ මුදුනට ගෑම",
+                    "ඉඟුරු කිරි හිසට සහ අනින්නට ගෑම",
+                    "පුස්කොළ පේස්ට් මල්ලෙන් හිසට ගෑම"
+                ],
+                symptoms: ["headache", "nausea", "light sensitivity", "dizziness", "හිසරදය", "වමනය", "හිස කරකැවීම"]
+            },
+            {
+                id: "d05",
+                name: "පාචනය (Diarrhea)",
+                tag: "Digestive",
+                desc: "දියවැඩියා මල බැහැර කිරීමේ තත්ත්වයකි. ආමාශ ආන්ත්‍රණ ආසාදන, අපවිත්‍ර ආහාර හෝ ජලය නිසා සිදුවේ. නියානකරණය අවදානම ඉහළය.",
+                remedies: [
+                    "කජු පේර ජුස් පානය කිරීම",
+                    "බත් කඳ සහ ලුණු වතුර පානය කිරීම",
+                    "කිරි තක්කාලි පානය කිරීම",
+                    "රටකජු බේක් කර පානය කිරීම"
+                ],
+                symptoms: ["loose stools", "abdominal pain", "dehydration", "පාචනය", "බඩේ වේදනාව", "නියානකරණය"]
+            },
+            {
+                id: "d06",
+                name: "ආමාශ ආබාධය (Gastritis)",
+                tag: "Digestive",
+                desc: "ආමාශයේ ඇතුළත පටලය ප්‍රදාහනය වීමේ තත්ත්වයකි. ආමාශයේ පිළිස්සීමක්, වේදනාව, බඩබෙහෙත සහ වමනය ඇතිවේ.",
+                remedies: [
+                    "අහුණු කරල් රාත්‍රයේ ජලයේ දමා උදෑසන එම ජලය පානය කිරීම",
+                    "ඉරිවේරිය කුළුබඩු අඹරා ජලය පානය කිරීම",
+                    "අල හුණු සහ මී පැණි මිශ්‍රණය පානය කිරීම"
+                ],
+                symptoms: ["stomach pain", "burning sensation", "bloating", "nausea", "ආමාශ වේදනාව", "පිළිස්සීම", "බඩබෙහෙත"]
+            },
+            {
+                id: "d07",
+                name: "දියවැඩියාව (Diabetes)",
+                tag: "Chronic",
+                desc: "ශරීරයේ ග්ලූකෝස් මට්ටම ඉහළ යාමේ දීර්ඝකාලීන තත්ත්වයකි. නිතරම පිපාසය, බහුල මුත්‍රා පහරුම සහ ක්ෂතිය ඇතිවේ.",
+                remedies: [
+                    "කාවක කව්කා පත්‍ර තේ දිනකට දෙවරක් පානය කිරීම",
+                    "නියංගල ජලය උදෑසන පානය කිරීම",
+                    "මුං ඇට ජලය පානය කිරීම",
+                    "කොළ කොහිලා කෑමට එක් කිරීම"
+                ],
+                symptoms: ["frequent urination", "thirst", "weight loss", "fatigue", "බහුල මුත්‍රා පහරුම", "පිපාසය", "ක්ෂතිය"]
+            },
+            {
+                id: "d08",
+                name: "අධි රුධිර පීඩනය (Hypertension)",
+                tag: "Chronic",
+                desc: "රුධිර නාලවල රුධිර පීඩනය සාමාන්‍ය මට්ටමට වඩා ඉහළ තත්ත්වයක පැවතීමයි. හිසරදය, කරකැවීම සහ දෘෂ්ටි මායාව ඇතිවිය හැක.",
+                remedies: [
+                    "ලුණු අඩු කර ආහාර ගැනීම සහ පරිප්පු ජලය බීම",
+                    "රතු දොඩම් ජුස් දිනකට වරක් පානය කිරීම",
+                    "ගරමුතු මල් තේ පානය කිරීම"
+                ],
+                symptoms: ["headache", "dizziness", "blurred vision", "chest pain", "හිසරදය", "කරකැවීම", "දෘෂ්ටි මායාව"]
+            },
+            {
+                id: "d09",
+                name: "අස්තමා (Asthma)",
+                tag: "Respiratory",
+                desc: "ශ්වාස නාල හිරවීම නිසා හුස්ම ගැනීමේ අපහසුතාවකි. සීනු සද්දයක්, පපුවේ ඇදීමක් සහ කැස්ස ඇතිවේ.",
+                remedies: [
+                    "අඩ්ඩලොඩා කෂායය පානය කිරීම",
+                    "තිප්පිලි කුළුබඩු සහ මී පැණි මිශ්‍ර පානය",
+                    "ඉරිවේරිය සහ කොත්තමල්ලි තේ බීම"
+                ],
+                symptoms: ["wheezing", "shortness of breath", "chest tightness", "cough", "හුස්ම ගැනීමේ අපහසුතාව", "පපුවේ ඇදීම", "කැස්ස"]
+            },
+            {
+                id: "d10",
+                name: "ඩෙංගු තුරුණුකාංගය (Dengue Fever)",
+                tag: "Infectious",
+                desc: "ඩෙංගු මෝස්තරයෙන් බෝවන වෛරස ආසාදනයකි. ඉතා ඉහළ උණ, සන්ධි වේදනාව, සමේ ලෙඩ රතු පැහැති පැල්ලම් ඇතිවේ.",
+                remedies: [
+                    "පපාය පැති ජුස් පානය කිරීම — ප්ලේට්ලට් වැඩි කරයි",
+                    "වෙනිවැල්ගැට සහ කොරකහ තේ පානය",
+                    "දෙහි ජුස් පානය කිරීම"
+                ],
+                symptoms: ["high fever", "joint pain", "rash", "bleeding", "ඉහළ උණ", "සන්ධි වේදනාව", "සමේ පැල්ලම්"]
+            },
+            {
+                id: "d11",
+                name: "පිටුපස වේදනාව (Back Pain)",
+                tag: "Musculoskeletal",
+                desc: "පිටුපස මාංශ පේශි හෝ සන්ධිවල වේදනාවකි. දිගු කාලයක් එකම ඉරියව්වෙන් සිටීම, බර එසවීම හෝ වැරදි ඉරියව් නිසා සිදුවේ.",
+                remedies: [
+                    "ඉරිවේරිය තෙල් මාලිෂය කිරීම",
+                    "උණාන පේස්ට් වේදනා ප්‍රදේශයට ගෑම",
+                    "සියඹලා තෙල් පිහදා සිඳීම"
+                ],
+                symptoms: ["back pain", "stiffness", "muscle spasm", "පිටුපස වේදනාව", "කටුකාමය", "මාංශ පේශි වේදනාව"]
+            },
+            {
+                id: "d12",
+                name: "සන්ධිවාදය (Arthritis)",
+                tag: "Musculoskeletal",
+                desc: "සන්ධිවල ප්‍රදාහනය නිසා වේදනාව, ඉදිමීම සහ චලනය කිරීමේ අපහසුතාව ඇතිවීමයි. වයස්ගත අයට වැඩියෙන් බලපායි.",
+                remedies: [
+                    "සියඹලා තෙල් පිහදා සිඳීම",
+                    "ඉරිවේරිය කෂායය පානය කිරීම",
+                    "රාසකිඳු ජුස් පානය කිරීම",
+                    "අමුක්කු පානය දිනකට වරක් ලබා ගැනීම"
+                ],
+                symptoms: ["joint pain", "swelling", "stiffness", "reduced mobility", "සන්ධි වේදනාව", "ඉදිමීම", "චලන අපහසුතාව"]
+            },
+            {
+                id: "d13",
+                name: "සමේ ආසාදන (Skin Infection)",
+                tag: "Dermatological",
+                desc: "බැක්ටීරියා හෝ ෆංගස් නිසා සමේ ඇතිවන ආසාදනයකි. කැසීම, රත් වීම, පැල්ලම් සහ ඉදිමීම ඇතිවේ.",
+                remedies: [
+                    "සඳනේ කිරි ආසාදිත ප්‍රදේශයට ගෑම",
+                    "අලු කෙවිත්ත පේස්ට් ප්‍රදේශයට යෙදීම",
+                    "දෙලුම් පැණි සමට යෙදීම"
+                ],
+                symptoms: ["itching", "redness", "rash", "swelling", "කැසීම", "රත් වීම", "පැල්ලම්"]
+            },
+            {
+                id: "d14",
+                name: "අක්ෂි වේදනාව (Eye Strain)",
+                tag: "Ophthalmological",
+                desc: "දිගු කාලයක් ජංගම දුරකථන හෝ පරිගණක තිරයක බලා සිටීම නිසා ඇස්වල වේදනාව, වියළි බව සහ මායා දෘෂ්ටිය ඇතිවීමයි.",
+                remedies: [
+                    "රෝස ජලය ඇස්වලට ටික ටික දමන්න",
+                    "කරවිලා පත්‍ර සිසිල් ජලයේ දමා ඇස් පිහදීම",
+                    "20-20-20 නීතිය: විනාඩි 20කට වරක් අඩි 20ක දුරින් තත්පර 20ක් බලන්න"
+                ],
+                symptoms: ["eye pain", "blurred vision", "dry eyes", "headache", "ඇස් වේදනාව", "මායා දෘෂ්ටිය", "වියළි ඇස්"]
+            },
+            {
+                id: "d15",
+                name: "නිද්‍රා රෝගය (Insomnia)",
+                tag: "Neurological",
+                desc: "නිදා ගැනීමට නොහැකි වීම හෝ නින්ද ප්‍රමාණවත් නොවීමේ තත්ත්වයකි. ආතතිය, අධිස්නායු ක්‍රියාකාරකම් හෝ වෙනත් හේතූන් නිසා සිදුවේ.",
+                remedies: [
+                    "කිරි තක්කාලි උණුසුම් කර නින්ද යන වේලාවට පෙර බීම",
+                    "අසමෝධගෘහ තෙල් මුදුනට ටිකක් ගෑම",
+                    "මී කිරි සහ කුරුඳු මිශ්‍ර උණුසුම් පානය"
+                ],
+                symptoms: ["difficulty sleeping", "fatigue", "irritability", "නිද්‍රාව", "ක්ෂතිය", "ආතතිය"]
+            },
+            {
+                id: "d16",
+                name: "වමනය (Nausea/Vomiting)",
+                tag: "Digestive",
+                desc: "ආමාශයේ අපහසුතාවක් දැනීම සහ ආහාර හෝ ජලය බලහත්කාරයෙන් පිටතට ගැනීමයි. ආහාර විෂ වීම, ගර්භණී බව හෝ චලන රෝග නිසා සිදුවේ.",
+                remedies: [
+                    "අල කුළුබඩු ජලය පානය කිරීම",
+                    "දෙහි ජුස් පානය කිරීම",
+                    "පුස්කොළ පත්‍රයක් සුවඳ දැනෙන ලෙස ගෑම"
+                ],
+                symptoms: ["nausea", "vomiting", "dizziness", "loss of appetite", "වමනය", "කරකැවීම", "ආහාර අරුචිය"]
+            },
+            {
+                id: "d17",
+                name: "දත් වේදනාව (Toothache)",
+                tag: "Dental",
+                desc: "දත්වල හෝ දත් මුල්වල ඇතිවන වේදනාවකි. කුහරය, දත් පැහැරීම හෝ දත් මුල් ආසාදන නිසා සිදුවේ.",
+                remedies: [
+                    "කළුදුවල මිදි දත් මත තබා මිනිත්තු කීපයක් තබා ගෑම",
+                    "ලුණු සහ ගම්මිරිස් උණු ජලයෙන් කොණ්ඩය සේදීම",
+                    "අලසුදු පේස්ට් දත් මත යෙදීම"
+                ],
+                symptoms: ["tooth pain", "swelling", "sensitivity", "දත් වේදනාව", "ඉදිමීම", "සංවේදීබව"]
+            },
+            {
+                id: "d18",
+                name: "උගුරේ වේදනාව (Sore Throat)",
+                tag: "Respiratory",
+                desc: "උගුරේ පෙනහළු ප්‍රදාහනය වීම නිසා ඇතිවන වේදනාවකි. ගිලීමට අපහසුතාව, වියළි බව සහ තද වේදනාව දැනේ.",
+                remedies: [
+                    "ලුණු උණු ජලයෙන් ගාර්ගලය කිරීම",
+                    "මී සහ ලුණු මිශ්‍රණය උගුරේ තබා ගෑම",
+                    "කොත්තමල්ලි තේ බීම"
+                ],
+                symptoms: ["sore throat", "difficulty swallowing", "dry throat", "උගුරේ වේදනාව", "ගිලීමේ අපහසුතාව"]
+            },
+            {
+                id: "d19",
+                name: "හෘද සැකිල්ලේ රෝග (Heartburn)",
+                tag: "Digestive",
+                desc: "ආමාශ අම්ලය ආහාර නාලයට ආපසු ගමන් කිරීම නිසා පපුවේ පිළිස්සීමක් දැනෙන තත්ත්වයකි.",
+                remedies: [
+                    "අලුසිං කිරි පානය කිරීම",
+                    "අල හුණු සහ ජලය මිශ්‍ර පානය",
+                    "දෙහි ජුස් පානය කිරීම",
+                    "බත්කොළ ජුස් පානය කිරීම"
+                ],
+                symptoms: ["chest burning", "acid taste", "bloating", "පපුවේ පිළිස්සීම", "අම්ල රස", "බඩබෙහෙත"]
+            },
+            {
+                id: "d20",
+                name: "අධිස්නායු ආතතිය (Anxiety)",
+                tag: "Psychological",
+                desc: "අධික බිය, කනස්කාරය සහ අසහනය නිසා හෘද ස්පන්දනය වේගවත් වීම, දහඩිය ගැලීම සහ මාංශ පේශි ආතතිය ඇතිවීමයි.",
+                remedies: [
+                    "අසමෝධගෘහ තේ පානය කිරීම",
+                    "පුස්කොළ සුවඳ ආලේපය නාසයට ගෑම",
+                    "මී කිරි සහ කුරුඳු මිශ්‍ර පානය"
+                ],
+                symptoms: ["restlessness", "rapid heartbeat", "sweating", "tension", "අසහනය", "හෘද ස්පන්දනය", "දහඩිය"]
+            },
+            {
+                id: "d21",
+                name: "ඉහළ කොලෙස්ට්‍රෝල් (High Cholesterol)",
+                tag: "Chronic",
+                desc: "රුධිරයේ කොලෙස්ට්‍රෝල් මට්ටම ඉහළ යාම හෘද රෝග අවදානම වැඩි කරයි. සාමාන්‍යයෙන් ලක්ෂණ නොපෙන්වන නමුත් ක්ෂතිය දැනේ.",
+                remedies: [
+                    "ලුණු සහ තෙල් අඩු ආහාර රටාවක් අනුගමනය කිරීම",
+                    "ඕලිව් තෙල් භාවිතය වැඩි කිරීම",
+                    "ගොඩමිදි (ගෝවා) පානය දිනකට වරක්"
+                ],
+                symptoms: ["fatigue", "chest pain", "shortness of breath", "ක්ෂතිය", "පපුවේ වේදනාව"]
+            },
+            {
+                id: "d22",
+                name: "වෘක්ක ආබාධ (Kidney Issues)",
+                tag: "Chronic",
+                desc: "වෘක්කවල ක්‍රියාකාරිත්වය අඩුවීමේ තත්ත්වයකි. පිටුපස පහළ කොටසේ වේදනාව, මුත්‍රාවේ වෙනස්කම් සහ ඉදිමීම ඇතිවේ.",
+                remedies: [
+                    "පුනර්ණවා ජලය පානය කිරීම",
+                    "අම්බුකෝළ ජුස් පානය කිරීම",
+                    "බෝංචි ජුස් පානය කිරීම",
+                    "පැණි බීම සහ ලුණු අඩු කිරීම"
+                ],
+                symptoms: ["back pain", "changes in urine", "swelling", "fatigue", "පිටුපස වේදනාව", "මුත්‍රා වෙනස්කම්", "ඉදිමීම"]
+            },
+            {
+                id: "d23",
+                name: "දැඩි සමන්සුන්කම (Constipation)",
+                tag: "Digestive",
+                desc: "මල දැඩි වීම සහ නිසි ලෙස බැහැර නොවීමේ තත්ත්වයකි. ආහාර රටාවේ වෙනස්කම්, ජලය අඩුවීම හෝ නිදාගත නොහැකි බව නිසා සිදුවේ.",
+                remedies: [
+                    "පේර ජුස් පානය කිරීම",
+                    "රාත්‍රයේ උණු ජලය බීම",
+                    "වෙනිවැල්ගැට අඹරා පානය කිරීම",
+                    "පලතුරු සහ පළතුරු පොහොසත් ආහාර ලබා ගැනීම"
+                ],
+                symptoms: ["difficulty passing stool", "bloating", "abdominal pain", "මල දැඩි වීම", "බඩබෙහෙත", "බඩේ වේදනාව"]
+            },
+            {
+                id: "d24",
+                name: "මාංශ පේශි වේදනාව (Muscle Pain)",
+                tag: "Musculoskeletal",
+                desc: "මාංශ පේශිවල වේදනාවකි. ව්‍යායාම, බර එසවීම හෝ දිගු කාලයක් එකම ඉරියව්වෙන් සිටීම නිසා සිදුවේ.",
+                remedies: [
+                    "ඉරිවේරිය තෙල් මාලිෂය කිරීම",
+                    "උණාන පේස්ට් වේදනා ප්‍රදේශයට ගෑම",
+                    "උණු ජලයෙන් නානය",
+                    "සියඹලා පොතු කෂායය පානය කිරීම"
+                ],
+                symptoms: ["muscle ache", "stiffness", "tenderness", "මාංශ පේශි වේදනාව", "කටුකාමය"]
+            },
+            {
+                id: "d25",
+                name: "ආහාර විෂ වීම (Food Poisoning)",
+                tag: "Digestive",
+                desc: "අපවිත්‍ර ආහාර නිසා ආමාශ ආන්ත්‍රණ පද්ධතියේ ආසාදනයකි. වමනය, පාචනය, බඩේ අමුතු වේදනාව සහ උණ ඇතිවේ.",
+                remedies: [
+                    "දෙහි ජුස් පානය කිරීම",
+                    "බත් කඳ සහ ලුණු වතුර පානය කිරීම",
+                    "ජීරක පානය (ORS) ලබා ගැනීම",
+                    "අල කුළුබඩු ජලය පානය කිරීම"
+                ],
+                symptoms: ["vomiting", "diarrhea", "stomach cramps", "fever", "වමනය", "පාචනය", "බඩේ වේදනාව", "උණ"]
+            }
+        ];
+
+        /* ==========================================================
+           TAG CONFIGURATION — Colors & Icons
+           ========================================================== */
+        var tagConfig = {
+            "Respiratory":    { color: "#2DD4A8", bg: "rgba(45,212,168,0.12)", icon: "fa-lungs" },
+            "Digestive":      { color: "#E8A838", bg: "rgba(232,168,56,0.12)", icon: "fa-utensils" },
+            "General":        { color: "#7EC8E3", bg: "rgba(126,200,227,0.12)", icon: "fa-thermometer-half" },
+            "Neurological":   { color: "#8B7EC8", bg: "rgba(139,126,200,0.12)", icon: "fa-brain" },
+            "Chronic":        { color: "#E85D4A", bg: "rgba(232,93,74,0.12)", icon: "fa-heart-pulse" },
+            "Infectious":     { color: "#E84A6F", bg: "rgba(232,74,111,0.12)", icon: "fa-virus" },
+            "Musculoskeletal":{ color: "#C4956A", bg: "rgba(196,149,106,0.12)", icon: "fa-bone" },
+            "Dermatological": { color: "#E88FA0", bg: "rgba(232,143,160,0.12)", icon: "fa-hand-dots" },
+            "Ophthalmological":{ color: "#4AA8E8", bg: "rgba(74,168,232,0.12)", icon: "fa-eye" },
+            "Dental":         { color: "#B8C4D0", bg: "rgba(184,196,208,0.12)", icon: "fa-tooth" },
+            "Psychological":  { color: "#7B8FA8", bg: "rgba(123,143,168,0.12)", icon: "fa-head-side-virus" }
+        };
+
+        /* ==========================================================
+           SYMPTOM LIST for the Symptom Checker
+           ========================================================== */
+        var symptomList = [
+            { id: "s01", label: "උණ (Fever)", keywords: ["fever", "උණ", "ඉහළ උණ"] },
+            { id: "s02", label: "හිසරදය (Headache)", keywords: ["headache", "හිසරදය"] },
+            { id: "s03", label: "කැස්ස (Cough)", keywords: ["cough", "කැස්ස"] },
+            { id: "s04", label: "නාසයෙන් ලෙඩ දියර (Runny Nose)", keywords: ["runny nose", "නාසයෙන් ලෙඩ දියර"] },
+            { id: "s05", label: "පිටුපස වේදනාව (Back Pain)", keywords: ["back pain", "පිටුපස වේදනාව"] },
+            { id: "s06", label: "උගුරේ වේදනාව (Sore Throat)", keywords: ["sore throat", "උගුරේ වේදනාව"] },
+            { id: "s07", label: "ආමාශ වේදනාව (Stomach Pain)", keywords: ["stomach pain", "abdominal pain", "ආමාශ වේදනාව", "බඩේ වේදනාව"] },
+            { id: "s08", label: "වමනය (Nausea)", keywords: ["nausea", "vomiting", "වමනය"] },
+            { id: "s09", label: "පාචනය (Diarrhea)", keywords: ["diarrhea", "loose stools", "පාචනය"] },
+            { id: "s10", label: "මාංශ පේශි වේදනාව (Muscle Pain)", keywords: ["muscle ache", "muscle spasm", "මාංශ පේශි වේදනාව"] },
+            { id: "s11", label: "සන්ධි වේදනාව (Joint Pain)", keywords: ["joint pain", "සන්ධි වේදනාව"] },
+            { id: "s12", label: "හුස්ම ගැනීමේ අපහසුතාව (Breathing Difficulty)", keywords: ["shortness of breath", "wheezing", "හුස්ම ගැනීමේ අපහසුතාව"] },
+            { id: "s13", label: "සමේ කැසීම (Itching)", keywords: ["itching", "rash", "redness", "කැසීම", "පැල්ලම්"] },
+            { id: "s14", label: "නිද්‍රාව (Insomnia)", keywords: ["difficulty sleeping", "නිද්‍රාව"] },
+            { id: "s15", label: "ඇස් වේදනාව (Eye Pain)", keywords: ["eye pain", "blurred vision", "ඇස් වේදනාව", "මායා දෘෂ්ටිය"] },
+            { id: "s16", label: "දත් වේදනාව (Tooth Pain)", keywords: ["tooth pain", "දත් වේදනාව"] },
+            { id: "s17", label: "ක්ෂතිය (Fatigue)", keywords: ["fatigue", "ක්ෂතිය"] },
+            { id: "s18", label: "බඩබෙහෙත (Bloating)", keywords: ["bloating", "බඩබෙහෙත"] },
+            { id: "s19", label: "කරකැවීම (Dizziness)", keywords: ["dizziness", "කරකැවීම"] },
+            { id: "s20", label: "ඉදිමීම (Swelling)", keywords: ["swelling", "ඉදිමීම"] }
+        ];
+
+        /* ==========================================================
+           BODY PART MAPPING
+           ========================================================== */
+        var bodyParts = [
+            { id: "bp-head", label: "හිස", icon: "fa-head-side", diseases: ["d04", "d14", "d17"] },
+            { id: "bp-throat", label: "උගුර", icon: "fa-head-side-cough", diseases: ["d01", "d02", "d18"] },
+            { id: "bp-chest", label: "පපුව", icon: "fa-lungs", diseases: ["d09", "d19", "d21"] },
+            { id: "bp-abdomen", label: "බඩ", icon: "fa-bowl-food", diseases: ["d05", "d06", "d16", "d23", "d25"] },
+            { id: "bp-back", label: "පිටුපස", icon: "fa-person", diseases: ["d11", "d22"] },
+            { id: "bp-joints", label: "සන්ධි", icon: "fa-bone", diseases: ["d12", "d10"] },
+            { id: "bp-skin", label: "සම", icon: "fa-hand", diseases: ["d13"] },
+            { id: "bp-whole", label: "සමස්ත ශරීරය", icon: "fa-person-rays", diseases: ["d03", "d07", "d08", "d15", "d20", "d24"] }
+        ];
+
+        /* ==========================================================
+           STATE
+           ========================================================== */
+        var activeFilter = "all";
+        var selectedSymptoms = [];
+        var selectedBodyPart = null;
+
+        /* ==========================================================
+           DOM REFERENCES
+           ========================================================== */
+        var searchInput = document.getElementById("searchInput");
+        var diseaseGrid = document.getElementById("diseaseGrid");
+        var featuredGrid = document.getElementById("featuredGrid");
+        var filterPills = document.getElementById("filterPills");
+        var modalOverlay = document.getElementById("modalOverlay");
+        var symptomGrid = document.getElementById("symptomGrid");
+        var bodypartGrid = document.getElementById("bodypartGrid");
+        var categoryGrid = document.getElementById("categoryGrid");
+        var toastContainer = document.getElementById("toastContainer");
+
+        /* ==========================================================
+           UTILITY FUNCTIONS
+           ========================================================== */
+        // Get English name from the full name string
+        function getEnglishName(fullName) {
+            var match = fullName.match(/\(([^)]+)\)/);
+            return match ? match[1] : fullName;
+        }
+
+        // Get Sinhala name from the full name string
+        function getSinhalaName(fullName) {
+            return fullName.split(" (")[0] || fullName;
+        }
+
+        // Show toast notification
+        function showToast(message, icon) {
+            icon = icon || "fa-circle-check";
+            var toast = document.createElement("div");
+            toast.className = "toast";
+            toast.innerHTML = '<i class="fa-solid ' + icon + '"></i> ' + message;
+            toastContainer.appendChild(toast);
+            setTimeout(function() {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 3000);
+        }
+
+        // Get disease by ID
+        function getDisease(id) {
+            for (var i = 0; i < diseaseDatabase.length; i++) {
+                if (diseaseDatabase[i].id === id) return diseaseDatabase[i];
+            }
+            return null;
+        }
+
+        /* ==========================================================
+           RENDER DISEASE CARD
+           ========================================================== */
+        function createDiseaseCard(disease, index) {
+            var tc = tagConfig[disease.tag] || { color: "#888", bg: "rgba(136,136,136,0.12)", icon: "fa-circle" };
+            var card = document.createElement("div");
+            card.className = "disease-card";
+            card.style.animationDelay = (index * 0.06) + "s";
+            card.setAttribute("tabindex", "0");
+            card.setAttribute("role", "button");
+            card.setAttribute("aria-label", "View details for " + disease.name);
+
+            card.innerHTML =
+                '<div class="card-header">' +
+                    '<div class="card-icon" style="background:' + tc.bg + '; color:' + tc.color + ';">' +
+                        '<i class="fa-solid ' + tc.icon + '"></i>' +
+                    '</div>' +
+                    '<span class="tag-badge" style="background:' + tc.bg + '; color:' + tc.color + '; border:1px solid ' + tc.color + '33;">' + disease.tag + '</span>' +
+                '</div>' +
+                '<div class="card-name">' + getSinhalaName(disease.name) + '</div>' +
+                '<div class="card-name-en">' + getEnglishName(disease.name) + '</div>' +
+                '<div class="card-desc">' + disease.desc + '</div>' +
+                '<div class="card-footer">' +
+                    '<span class="card-remedies-count"><i class="fa-solid fa-leaf"></i> ප්‍රතිකාර ' + disease.remedies.length + ' ක්</span>' +
+                    '<i class="fa-solid fa-arrow-right card-arrow"></i>' +
+                '</div>';
+
+            card.addEventListener("click", function() { openModal(disease); });
+            card.addEventListener("keydown", function(e) {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openModal(disease);
+                }
+            });
+
+            return card;
+        }
+
+        /* ==========================================================
+           RENDER DISEASE GRID (Full)
+           ========================================================== */
+        function renderDiseaseGrid(filter, searchTerm) {
+            diseaseGrid.innerHTML = "";
+            var count = 0;
+            var term = (searchTerm || "").toLowerCase().trim();
+
+            for (var i = 0; i < diseaseDatabase.length; i++) {
+                var d = diseaseDatabase[i];
+                var matchFilter = (filter === "all" || d.tag === filter);
+                var matchSearch = !term ||
+                    d.name.toLowerCase().indexOf(term) !== -1 ||
+                    d.tag.toLowerCase().indexOf(term) !== -1 ||
+                    getEnglishName(d.name).toLowerCase().indexOf(term) !== -1 ||
+                    getSinhalaName(d.name).indexOf(term) !== -1;
+
+                if (matchFilter && matchSearch) {
+                    diseaseGrid.appendChild(createDiseaseCard(d, count));
+                    count++;
+                }
+            }
+
+            if (count === 0) {
+                diseaseGrid.innerHTML =
+                    '<div class="no-results">' +
+                        '<i class="fa-solid fa-face-sad-tear"></i>' +
+                        '<p>රෝග හමු නොවීය. වෙනත් පදයකින් සොයන්න.</p>' +
+                    '</div>';
+            }
+        }
+
+        /* ==========================================================
+           RENDER FEATURED GRID (Home Page — first 6)
+           ========================================================== */
+        function renderFeaturedGrid() {
+            featuredGrid.innerHTML = "";
+            var featured = diseaseDatabase.slice(0, 6);
+            for (var i = 0; i < featured.length; i++) {
+                featuredGrid.appendChild(createDiseaseCard(featured[i], i));
+            }
+        }
+
+        /* ==========================================================
+           RENDER FILTER PILLS
+           ========================================================== */
+        function renderFilterPills() {
+            filterPills.innerHTML = "";
+            var tags = ["all"];
+            var tagSet = {};
+            for (var i = 0; i < diseaseDatabase.length; i++) {
+                if (!tagSet[diseaseDatabase[i].tag]) {
+                    tagSet[diseaseDatabase[i].tag] = true;
+                    tags.push(diseaseDatabase[i].tag);
+                }
+            }
+
+            for (var j = 0; j < tags.length; j++) {
+                var pill = document.createElement("button");
+                pill.className = "filter-pill" + (tags[j] === activeFilter ? " active" : "");
+                pill.textContent = tags[j] === "all" ? "සියල්ල" : tags[j];
+                pill.setAttribute("data-filter", tags[j]);
+                pill.addEventListener("click", function() {
+                    activeFilter = this.getAttribute("data-filter");
+                    var allPills = filterPills.querySelectorAll(".filter-pill");
+                    allPills.forEach(function(p) { p.classList.remove("active"); });
+                    this.classList.add("active");
+                    renderDiseaseGrid(activeFilter, searchInput.value);
+                });
+                filterPills.appendChild(pill);
+            }
+        }
+
+        /* ==========================================================
+           SEARCH FUNCTIONALITY — Real-time
+           ========================================================== */
+        searchInput.addEventListener("input", function() {
+            renderDiseaseGrid(activeFilter, this.value);
+        });
+
+        /* ==========================================================
+           MODAL — Open & Close
+           ========================================================== */
+        function openModal(disease) {
+            var tc = tagConfig[disease.tag] || { color: "#888", bg: "rgba(136,136,136,0.12)" };
+
+            document.getElementById("modalTag").textContent = disease.tag;
+            document.getElementById("modalTag").style.background = tc.bg;
+            document.getElementById("modalTag").style.color = tc.color;
+            document.getElementById("modalTag").style.border = "1px solid " + tc.color + "44";
+
+            document.getElementById("modalTitle").textContent = getSinhalaName(disease.name);
+            document.getElementById("modalTitleEn").textContent = getEnglishName(disease.name);
+            document.getElementById("modalDesc").textContent = disease.desc;
+
+            var remediesList = document.getElementById("modalRemedies");
+            remediesList.innerHTML = "";
+            for (var i = 0; i < disease.remedies.length; i++) {
+                var li = document.createElement("li");
+                li.innerHTML =
+                    '<span class="remedy-num">' + (i + 1) + '</span>' +
+                    '<span>' + disease.remedies[i] + '</span>';
+                remediesList.appendChild(li);
+            }
+
+            modalOverlay.classList.add("open");
+            document.body.style.overflow = "hidden";
+
+            // Focus trap — focus close button
+            setTimeout(function() {
+                document.querySelector(".modal-close").focus();
+            }, 100);
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove("open");
+            document.body.style.overflow = "";
+        }
+
+        // Close modal on overlay click
+        modalOverlay.addEventListener("click", function(e) {
+            if (e.target === modalOverlay) {
+                closeModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape" && modalOverlay.classList.contains("open")) {
+                closeModal();
+            }
+        });
+
+        /* ==========================================================
+           NAVIGATION — Maps(pageId)
+           ========================================================== */
+        function Maps(pageId) {
+            // Hide all pages
+            var pages = document.querySelectorAll(".page");
+            pages.forEach(function(p) { p.classList.remove("active"); });
+
+            // Show target page
+            var target = document.getElementById("page-" + pageId);
+            if (target) {
+                target.classList.add("active");
+            }
+
+            // Update nav links
+            var navLinks = document.querySelectorAll(".nav-links a");
+            navLinks.forEach(function(a) {
+                a.classList.remove("active");
+                if (a.getAttribute("data-page") === pageId) {
+                    a.classList.add("active");
+                }
+            });
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: "smooth" });
+
+            // Close mobile nav
+            document.getElementById("navLinks").classList.remove("open");
+        }
+
+        /* ==========================================================
+           MOBILE NAV TOGGLE
+           ========================================================== */
+        function toggleMobileNav() {
+            document.getElementById("navLinks").classList.toggle("open");
+        }
+
+        /* ==========================================================
+           TAB SWITCHING — Symptom Checker
+           ========================================================== */
+        function switchTab(tabId) {
+            // Update tab buttons
+            var tabs = document.querySelectorAll(".tool-tab");
+            tabs.forEach(function(t) {
+                t.classList.remove("active");
+                t.setAttribute("aria-selected", "false");
+                if (t.getAttribute("data-tab") === tabId) {
+                    t.classList.add("active");
+                    t.setAttribute("aria-selected", "true");
+                }
+            });
+
+            // Update panels
+            var panels = document.querySelectorAll(".tool-panel");
+            panels.forEach(function(p) { p.classList.remove("active"); });
+            var panel = document.getElementById("panel-" + tabId);
+            if (panel) {
+                panel.classList.add("active");
+            }
+        }
+
+        /* ==========================================================
+           SYMPTOM CHECKER — By Symptoms
+           ========================================================== */
+        function renderSymptomGrid() {
+            symptomGrid.innerHTML = "";
+            for (var i = 0; i < symptomList.length; i++) {
+                var chip = document.createElement("button");
+                chip.className = "symptom-chip";
+                chip.setAttribute("data-symptom-id", symptomList[i].id);
+                chip.innerHTML = '<i class="fa-solid fa-plus"></i> ' + symptomList[i].label;
+                chip.addEventListener("click", function() {
+                    var sid = this.getAttribute("data-symptom-id");
+                    var idx = selectedSymptoms.indexOf(sid);
+                    if (idx > -1) {
+                        selectedSymptoms.splice(idx, 1);
+                        this.classList.remove("selected");
+                        this.querySelector("i").className = "fa-solid fa-plus";
+                    } else {
+                        selectedSymptoms.push(sid);
+                        this.classList.add("selected");
+                        this.querySelector("i").className = "fa-solid fa-check";
+                    }
+                });
+                symptomGrid.appendChild(chip);
+            }
+        }
+
+        function checkSymptoms() {
+            var resultsDiv = document.getElementById("symptomResults");
+            resultsDiv.innerHTML = "";
+
+            if (selectedSymptoms.length === 0) {
+                showToast("කරුණාකර අවම වශයෙන් රෝග ලක්ෂණයක් තෝරන්න", "fa-circle-exclamation");
+                return;
+            }
+
+            // Collect selected symptom keywords
+            var selectedKeywords = [];
+            for (var s = 0; s < selectedSymptoms.length; s++) {
+                for (var k = 0; k < symptomList.length; k++) {
+                    if (symptomList[k].id === selectedSymptoms[s]) {
+                        selectedKeywords = selectedKeywords.concat(symptomList[k].keywords);
+                        break;
+                    }
+                }
+            }
+
+            // Score each disease
+            var scored = [];
+            for (var i = 0; i < diseaseDatabase.length; i++) {
+                var d = diseaseDatabase[i];
+                var matchCount = 0;
+                for (var j = 0; j < selectedKeywords.length; j++) {
+                    for (var m = 0; m < d.symptoms.length; m++) {
+                        if (d.symptoms[m].toLowerCase() === selectedKeywords[j].toLowerCase()) {
+                            matchCount++;
+                            break;
+                        }
+                    }
+                }
+                if (matchCount > 0) {
+                    var score = Math.round((matchCount / selectedKeywords.length) * 100);
+                    scored.push({ disease: d, score: score, matches: matchCount });
+                }
+            }
+
+            // Sort by score descending
+            scored.sort(function(a, b) { return b.score - a.score; });
+
+            if (scored.length === 0) {
+                resultsDiv.innerHTML =
+                    '<h3><i class="fa-solid fa-magnifying-glass"></i> ප්‍රතිඵල</h3>' +
+                    '<div class="no-results" style="padding:30px;">' +
+                        '<i class="fa-solid fa-face-meh"></i>' +
+                        '<p>තෝරාගත් ලක්ෂණවලට ගැලපෙන රෝග හමු නොවීය.</p>' +
+                    '</div>';
+                return;
+            }
+
+            var html = '<h3><i class="fa-solid fa-magnifying-glass"></i> ප්‍රතිඵල (' + scored.length + ')</h3>';
+            for (var r = 0; r < scored.length; r++) {
+                var item = scored[r];
+                var tc = tagConfig[item.disease.tag] || { color: "#888" };
+                html +=
+                    '<div class="result-card" onclick="openModal(getDisease(\'' + item.disease.id + '\'))">' +
+                        '<div>' +
+                            '<div class="match-score" style="color:' + tc.color + ';">' + item.score + '%</div>' +
+                            '<div class="match-label">ගැලපීම</div>' +
+                        '</div>' +
+                        '<div class="result-info">' +
+                            '<div class="result-name">' + getSinhalaName(item.disease.name) + '</div>' +
+                            '<div class="result-tag">' + getEnglishName(item.disease.name) + ' &middot; ' + item.disease.tag + '</div>' +
+                        '</div>' +
+                        '<i class="fa-solid fa-chevron-right" style="color:var(--muted);"></i>' +
+                    '</div>';
+            }
+
+            resultsDiv.innerHTML = html;
+            showToast(scored.length + " ක් රෝග හමුවිය", "fa-circle-check");
+        }
+
+        /* ==========================================================
+           SYMPTOM CHECKER — By Body Part
+           ========================================================== */
+        function renderBodyPartGrid() {
+            bodypartGrid.innerHTML = "";
+            for (var i = 0; i < bodyParts.length; i++) {
+                var bp = bodyParts[i];
+                var btn = document.createElement("button");
+                btn.className = "bodypart-btn";
+                btn.setAttribute("data-bp-id", bp.id);
+                btn.innerHTML = '<i class="fa-solid ' + bp.icon + '"></i> ' + bp.label;
+                btn.addEventListener("click", function() {
+                    var bpId = this.getAttribute("data-bp-id");
+                    // Toggle active
+                    var allBtns = bodypartGrid.querySelectorAll(".bodypart-btn");
+                    allBtns.forEach(function(b) { b.classList.remove("active"); });
+
+                    if (selectedBodyPart === bpId) {
+                        selectedBodyPart = null;
+                        document.getElementById("bodypartResults").innerHTML = "";
+                        return;
+                    }
+
+                    selectedBodyPart = bpId;
+                    this.classList.add("active");
+                    renderBodyPartResults(bpId);
+                });
+                bodypartGrid.appendChild(btn);
+            }
+        }
+
+        function renderBodyPartResults(bpId) {
+            var resultsDiv = document.getElementById("bodypartResults");
+            resultsDiv.innerHTML = "";
+
+            var bpData = null;
+            for (var i = 0; i < bodyParts.length; i++) {
+                if (bodyParts[i].id === bpId) { bpData = bodyParts[i]; break; }
+            }
+            if (!bpData) return;
+
+            var html = '<h3><i class="fa-solid fa-magnifying-glass"></i> ' + bpData.label + ' — ආශ්‍රිත රෝග (' + bpData.diseases.length + ')</h3>';
+
+            for (var j = 0; j < bpData.diseases.length; j++) {
+                var d = getDisease(bpData.diseases[j]);
+                if (!d) continue;
+                var tc = tagConfig[d.tag] || { color: "#888" };
+                html +=
+                    '<div class="result-card" onclick="openModal(getDisease(\'' + d.id + '\'))">' +
+                        '<div class="card-icon" style="background:' + (tc.bg || "rgba(136,136,136,0.12)") + '; color:' + tc.color + '; width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">' +
+                            '<i class="fa-solid ' + (tc.icon || "fa-circle") + '"></i>' +
+                        '</div>' +
+                        '<div class="result-info">' +
+                            '<div class="result-name">' + getSinhalaName(d.name) + '</div>' +
+                            '<div class="result-tag">' + getEnglishName(d.name) + ' &middot; ' + d.tag + '</div>' +
+                        '</div>' +
+                        '<i class="fa-solid fa-chevron-right" style="color:var(--muted);"></i>' +
+                    '</div>';
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        /* ==========================================================
+           SYMPTOM CHECKER — By Categories
+           ========================================================== */
+        function renderCategoryGrid() {
+            categoryGrid.innerHTML = "";
+            var catMap = {};
+            for (var i = 0; i < diseaseDatabase.length; i++) {
+                var tag = diseaseDatabase[i].tag;
+                if (!catMap[tag]) catMap[tag] = [];
+                catMap[tag].push(diseaseDatabase[i]);
+            }
+
+            var tagNames = Object.keys(catMap);
+            for (var t = 0; t < tagNames.length; t++) {
+                var tagName = tagNames[t];
+                var tc = tagConfig[tagName] || { color: "#888", bg: "rgba(136,136,136,0.12)", icon: "fa-circle" };
+                var card = document.createElement("div");
+                card.className = "category-card";
+                card.innerHTML =
+                    '<div class="cat-icon" style="background:' + tc.bg + '; color:' + tc.color + ';">' +
+                        '<i class="fa-solid ' + tc.icon + '"></i>' +
+                    '</div>' +
+                    '<div class="cat-name">' + tagName + '</div>' +
+                    '<div class="cat-count">රෝග ' + catMap[tagName].length + ' ක්</div>';
+                card.addEventListener("click", function() {
+                    var clickedTag = this.querySelector(".cat-name").textContent;
+                    renderCategoryResults(clickedTag);
+                });
+                categoryGrid.appendChild(card);
+            }
+        }
+
+        function renderCategoryResults(tagName) {
+            var resultsDiv = document.getElementById("categoryResults");
+            resultsDiv.innerHTML = "";
+
+            var diseases = [];
+            for (var i = 0; i < diseaseDatabase.length; i++) {
+                if (diseaseDatabase[i].tag === tagName) diseases.push(diseaseDatabase[i]);
+            }
+
+            var tc = tagConfig[tagName] || { color: "#888" };
+            var html = '<h3><i class="fa-solid ' + (tc.icon || "fa-circle") + '" style="color:' + tc.color + ';"></i> ' + tagName + ' — රෝග (' + diseases.length + ')</h3>';
+
+            for (var j = 0; j < diseases.length; j++) {
+                var d = diseases[j];
+                html +=
+                    '<div class="result-card" onclick="openModal(getDisease(\'' + d.id + '\'))">' +
+                        '<div class="card-icon" style="background:' + (tc.bg || "rgba(136,136,136,0.12)") + '; color:' + tc.color + '; width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">' +
+                            '<i class="fa-solid ' + (tc.icon || "fa-circle") + '"></i>' +
+                        '</div>' +
+                        '<div class="result-info">' +
+                            '<div class="result-name">' + getSinhalaName(d.name) + '</div>' +
+                            '<div class="result-tag">' + getEnglishName(d.name) + '</div>' +
+                        '</div>' +
+                        '<i class="fa-solid fa-chevron-right" style="color:var(--muted);"></i>' +
+                    '</div>';
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        /* ==========================================================
+           NAV SCROLL EFFECT
+           ========================================================== */
+        window.addEventListener("scroll", function() {
+            var nav = document.querySelector("nav");
+            if (window.scrollY > 20) {
+                nav.classList.add("scrolled");
+            } else {
+                nav.classList.remove("scrolled");
+            }
+        });
+
+        /* ==========================================================
+           INITIALIZE
+           ========================================================== */
+        function init() {
+            renderFeaturedGrid();
+            renderFilterPills();
+            renderDiseaseGrid("all", "");
+            renderSymptomGrid();
+            renderBodyPartGrid();
+            renderCategoryGrid();
+        }
+
+        init();
+    </script>
+</body>
+</html>
